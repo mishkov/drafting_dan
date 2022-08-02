@@ -1,3 +1,4 @@
+import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/material.dart';
 
 import 'src/app.dart';
@@ -17,4 +18,9 @@ void main() async {
   // SettingsController for changes, then passes it further down to the
   // SettingsView.
   runApp(MyApp(settingsController: settingsController));
+  doWhenWindowReady(() {
+    final win = appWindow;
+    win.title = "Drafting Dan";
+    win.show();
+  });
 }
