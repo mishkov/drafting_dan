@@ -276,6 +276,14 @@ class ThreeDimensionalPoint {
       throw UnimplementedError();
     }
   }
+
+  List<List<double>> toMatrix() {
+    return [
+      [x],
+      [y],
+      [z],
+    ];
+  }
 }
 
 class ThreeDimensionalLine {
