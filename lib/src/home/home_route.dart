@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:bitsdojo_window/bitsdojo_window.dart';
+import 'package:drafting_dan/src/home/three_dimensional_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -14,18 +15,57 @@ class HomeRoute extends StatefulWidget {
 }
 
 class _HomeRouteState extends State<HomeRoute> {
-  List<ThreeDimensionalLine> lines = [];
+  List<ThreeDimensionalLine> lines = [
+    ThreeDimensionalLine(
+        begin: ThreeDimensionalPoint(0, 0, 0),
+        end: ThreeDimensionalPoint(100, 0, 0)),
+    ThreeDimensionalLine(
+        begin: ThreeDimensionalPoint(100, 0, 0),
+        end: ThreeDimensionalPoint(100, 100, 0)),
+    ThreeDimensionalLine(
+        begin: ThreeDimensionalPoint(100, 100, 0),
+        end: ThreeDimensionalPoint(0, 100, 0)),
+    ThreeDimensionalLine(
+        begin: ThreeDimensionalPoint(0, 100, 0),
+        end: ThreeDimensionalPoint(0, 0, 0)),
+    //next layer
+    ThreeDimensionalLine(
+        begin: ThreeDimensionalPoint(0, 0, 100),
+        end: ThreeDimensionalPoint(100, 0, 100)),
+    ThreeDimensionalLine(
+        begin: ThreeDimensionalPoint(100, 0, 100),
+        end: ThreeDimensionalPoint(100, 100, 100)),
+    ThreeDimensionalLine(
+        begin: ThreeDimensionalPoint(100, 100, 100),
+        end: ThreeDimensionalPoint(0, 100, 100)),
+    ThreeDimensionalLine(
+        begin: ThreeDimensionalPoint(0, 100, 100),
+        end: ThreeDimensionalPoint(0, 0, 100)),
+    // heights
+    ThreeDimensionalLine(
+        begin: ThreeDimensionalPoint(0, 0, 0),
+        end: ThreeDimensionalPoint(0, 0, 150)),
+    ThreeDimensionalLine(
+        begin: ThreeDimensionalPoint(100, 0, 0),
+        end: ThreeDimensionalPoint(100, 0, 100)),
+    ThreeDimensionalLine(
+        begin: ThreeDimensionalPoint(100, 100, 0),
+        end: ThreeDimensionalPoint(100, 100, 100)),
+    ThreeDimensionalLine(
+        begin: ThreeDimensionalPoint(0, 100, 0),
+        end: ThreeDimensionalPoint(0, 100, 100)),
+  ];
   List<bool> toolStatuses = [false, false];
 
   bool isBeginPointSelected = false;
   Offset? begin;
 
-  double xAxisRotationDegreeInRadians = math.pi;
+  double xAxisRotationDegreeInRadians = 0.0;
   double yAxisRotationDegreeInRadians = 0.0;
-  ThreeDimensionalPoint cameraPosition = ThreeDimensionalPoint(0, 0, 5);
+  ThreeDimensionalPoint cameraPosition = ThreeDimensionalPoint(0, 0, 0);
 
   ThreeDimensionalPoint cameraPositionAfterScale =
-      ThreeDimensionalPoint(0, 0, 5);
+      ThreeDimensionalPoint(0, 0, 0);
   FocusNode? focus;
 
   bool isShiftPressed = false;
@@ -203,17 +243,21 @@ class _HomeRouteState extends State<HomeRoute> {
                       onScaleUpdate: (details) {
                         setState(() {
                           if (!isShiftPressed) {
-                            cameraPosition.x -= details.focalPointDelta.dx / 50;
-                            cameraPosition.y += details.focalPointDelta.dy / 50;
+                            cameraPosition.x -= details.focalPointDelta.dx;
+                            cameraPosition.y -= details.focalPointDelta.dy;
                           } else {
-                            yAxisRotationDegreeInRadians +=
+                            yAxisRotationDegreeInRadians -=
                                 details.focalPointDelta.dx / 50;
                             xAxisRotationDegreeInRadians +=
                                 details.focalPointDelta.dy / 50;
                           }
 
-                          cameraPosition.z =
-                              cameraPositionAfterScale.z / details.scale;
+                          cameraPosition.z = (cameraPositionAfterScale.z +
+                                      ThreeDimensionanPainter
+                                          .distanceFromEyeToPerspectivePage) *
+                                  details.scale -
+                              ThreeDimensionanPainter
+                                  .distanceFromEyeToPerspectivePage;
                         });
                       },
                       onScaleEnd: (details) {
@@ -229,11 +273,11 @@ class _HomeRouteState extends State<HomeRoute> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: CustomPaint(
-                          painter: AxonometricPainter(
-                            lines,
-                            xAxisRotationDegreeInRadians:
+                          painter: ThreeDimensionanPainter(
+                            lines: lines,
+                            xCameraRotationDegreeInRadians:
                                 xAxisRotationDegreeInRadians,
-                            yAxisRotationDegreeInRadians:
+                            yCameraRotationDegreeInRadians:
                                 yAxisRotationDegreeInRadians,
                             cameraPosition: cameraPosition,
                           ),
@@ -282,6 +326,7 @@ class ThreeDimensionalPoint {
       [x],
       [y],
       [z],
+      [1]
     ];
   }
 }
@@ -688,7 +733,7 @@ class AxonometricPainter extends CustomPainter {
 
     offset = [
       [1, 0, 0, offsetX],
-      [0, -1, 0, offsetY],
+      [0, 1, 0, offsetY],
       [0, 0, 1, 0],
       [0, 0, 0, 1]
     ];
