@@ -29,6 +29,12 @@ class ThreeDimensionanPainter extends CustomPainter {
 
   ThreeDimensionalPoint cameraPosition;
 
+  static const axisMargin = 10;
+
+  double maxXCoordinate = 0.0;
+  double maxYCoordinate = 0.0;
+  double maxZCoordinate = 0.0;
+
   ThreeDimensionanPainter({
     required this.lines,
     required this.xCameraRotationDegreeInRadians,
@@ -132,7 +138,12 @@ class ThreeDimensionanPainter extends CustomPainter {
     ];
   }
 
-  void drawLine(ThreeDimensionalLine line, Canvas canvas, Size size) {
+  void drawLine(
+    ThreeDimensionalLine line,
+    Paint linePaint,
+    Canvas canvas,
+    Size size,
+  ) {
     final beginMatrix = line.begin.toMatrix();
     final endMatrix = line.end.toMatrix();
 
@@ -167,12 +178,6 @@ class ThreeDimensionanPainter extends CustomPainter {
     translatedEndMatrix = multiplyMatrix(
         getOffsetOriginToCenterMatrix(size), translatedEndMatrix);
 
-    final linePaint = Paint()
-      ..color = Colors.black
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeJoin = StrokeJoin.round;
-
     if (translatedBeginMatrix[2][0] + distanceFromEyeToPerspectivePage > 0 &&
         translatedEndMatrix[2][0] + distanceFromEyeToPerspectivePage > 0) {
       canvas.drawLine(
@@ -185,9 +190,39 @@ class ThreeDimensionanPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = Colors.black
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke
+      ..strokeJoin = StrokeJoin.round;
+
     for (final line in lines) {
-      drawLine(line, canvas, size);
+      maxXCoordinate = math.max(line.begin.x, maxXCoordinate);
+      maxXCoordinate = math.max(line.end.x, maxXCoordinate);
+      maxYCoordinate = math.max(line.begin.y, maxXCoordinate);
+      maxYCoordinate = math.max(line.end.y, maxXCoordinate);
+      maxZCoordinate = math.max(line.begin.z, maxXCoordinate);
+      maxZCoordinate = math.max(line.end.z, maxXCoordinate);
+
+      drawLine(line, linePaint, canvas, size);
     }
+
+    final xAsix = ThreeDimensionalLine(
+      begin: ThreeDimensionalPoint(0, 0, 0),
+      end: ThreeDimensionalPoint(maxXCoordinate, 0, 0),
+    );
+    final yAsix = ThreeDimensionalLine(
+      begin: ThreeDimensionalPoint(0, 0, 0),
+      end: ThreeDimensionalPoint(0, maxYCoordinate, 0),
+    );
+    final zAsix = ThreeDimensionalLine(
+      begin: ThreeDimensionalPoint(0, 0, 0),
+      end: ThreeDimensionalPoint(0, 0, maxZCoordinate),
+    );
+
+    drawLine(xAsix, linePaint..color = Colors.red, canvas, size);
+    drawLine(yAsix, linePaint..color = Colors.green, canvas, size);
+    drawLine(zAsix, linePaint..color = Colors.blue, canvas, size);
   }
 
   @override
