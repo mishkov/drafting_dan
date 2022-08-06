@@ -62,6 +62,7 @@ class _HomeRouteState extends State<HomeRoute> {
 
   double xAxisRotationDegreeInRadians = 0.0;
   double yAxisRotationDegreeInRadians = 0.0;
+  double zAxisRotationDegreeInRadians = 0.0;
   ThreeDimensionalPoint cameraPosition = ThreeDimensionalPoint(0, 0, 0);
 
   ThreeDimensionalPoint cameraPositionAfterScale =
@@ -246,7 +247,7 @@ class _HomeRouteState extends State<HomeRoute> {
                             cameraPosition.x -= details.focalPointDelta.dx;
                             cameraPosition.y -= details.focalPointDelta.dy;
                           } else {
-                            yAxisRotationDegreeInRadians -=
+                            zAxisRotationDegreeInRadians -=
                                 details.focalPointDelta.dx / 50;
                             xAxisRotationDegreeInRadians +=
                                 details.focalPointDelta.dy / 50;
@@ -279,6 +280,8 @@ class _HomeRouteState extends State<HomeRoute> {
                                 xAxisRotationDegreeInRadians,
                             yCameraRotationDegreeInRadians:
                                 yAxisRotationDegreeInRadians,
+                            zCameraRotationDegreeInRadians:
+                                zAxisRotationDegreeInRadians,
                             cameraPosition: cameraPosition,
                           ),
                         ),
