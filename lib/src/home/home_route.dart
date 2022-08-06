@@ -59,15 +59,19 @@ class _HomeRouteState extends State<HomeRoute> {
   ];
   List<bool> toolStatuses = [false, false];
 
-  double xAxisRotationDegreeInRadians = 0.0;
+  double xAxisRotationDegreeInRadians = -(math.pi + math.pi / 4);
   double yAxisRotationDegreeInRadians = 0.0;
-  double zAxisRotationDegreeInRadians = 0.0;
+  double zAxisRotationDegreeInRadians = math.pi + math.pi / 4;
   ThreeDimensionalPoint cameraPosition = ThreeDimensionalPoint(0, 0, -120);
 
   ThreeDimensionalPoint cameraPositionAfterScale =
       ThreeDimensionalPoint(0, 0, -120);
 
   bool isShiftPressed = false;
+
+  static const noInformation = 'Drafting Dan 1.0v alpha';
+  String information = noInformation;
+  String status = 'status';
 
   @override
   void initState() {
@@ -77,137 +81,163 @@ class _HomeRouteState extends State<HomeRoute> {
     });
   }
 
+  void showMessage(String message) {
+    setState(() {
+      information = message;
+      Future.delayed(const Duration(seconds: 5), () {
+        setState(() {
+          information = noInformation;
+        });
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
           WindowTitleBarBox(child: MoveWindow()),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                ToggleButtons(
-                  isSelected: toolStatuses,
-                  children: const [
-                    Icon(Icons.draw),
-                    Icon(Icons.back_hand),
-                  ],
-                  onPressed: (index) {
-                    setState(() {
-                      for (int i = 0; i < toolStatuses.length; i++) {
-                        toolStatuses[i] = false;
-                      }
-                      toolStatuses[index] = true;
-                    });
-                  },
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      lines = [];
-                    });
-                  },
-                  child: const Text('clear'),
-                ),
-              ],
-            ),
-          ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Row(
+              child: Column(
                 children: [
+                  Row(
+                    children: [
+                      ToggleButtons(
+                        isSelected: toolStatuses,
+                        children: const [
+                          Icon(Icons.draw),
+                          Icon(Icons.back_hand),
+                        ],
+                        onPressed: (index) {
+                          setState(() {
+                            for (int i = 0; i < toolStatuses.length; i++) {
+                              toolStatuses[i] = false;
+                            }
+                            toolStatuses[index] = true;
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            lines = [];
+                          });
+                        },
+                        child: const Text('clear'),
+                      ),
+                    ],
+                  ),
                   Expanded(
-                    flex: 3,
-                    child: Column(
+                    child: Row(
                       children: [
                         Expanded(
-                          child: Row(
+                          flex: 3,
+                          child: Column(
                             children: [
                               Expanded(
-                                child: TwoDimensionalView(
-                                  lines: lines,
-                                  isInEditMode: toolStatuses.first,
-                                  view: View.front,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: TwoDimensionalView(
+                                        lines: lines,
+                                        isInEditMode: toolStatuses.first,
+                                        view: View.front,
+                                        onMessage: showMessage,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: TwoDimensionalView(
+                                        lines: lines,
+                                        isInEditMode: toolStatuses.first,
+                                        view: View.left,
+                                        onMessage: showMessage,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               Expanded(
-                                child: TwoDimensionalView(
-                                  lines: lines,
-                                  isInEditMode: toolStatuses.first,
-                                  view: View.left,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: TwoDimensionalView(
+                                        lines: lines,
+                                        isInEditMode: toolStatuses.first,
+                                        view: View.top,
+                                        onMessage: showMessage,
+                                      ),
+                                    ),
+                                    const Expanded(child: Placeholder()),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Expanded(
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: TwoDimensionalView(
+                          flex: 2,
+                          child: GestureDetector(
+                            onScaleUpdate: (details) {
+                              setState(() {
+                                if (!isShiftPressed) {
+                                  cameraPosition.x -=
+                                      details.focalPointDelta.dx;
+                                  cameraPosition.y -=
+                                      details.focalPointDelta.dy;
+                                } else {
+                                  zAxisRotationDegreeInRadians -=
+                                      details.focalPointDelta.dx / 50;
+                                  xAxisRotationDegreeInRadians +=
+                                      details.focalPointDelta.dy / 50;
+                                }
+
+                                cameraPosition.z = cameraPositionAfterScale.z +
+                                    (ThreeDimensionanPainter
+                                            .distanceFromEyeToPerspectivePage) *
+                                        (details.scale - 1);
+                              });
+                            },
+                            onScaleEnd: (details) {
+                              cameraPositionAfterScale.x = cameraPosition.x;
+                              cameraPositionAfterScale.y = cameraPosition.y;
+                              cameraPositionAfterScale.z = cameraPosition.z;
+                            },
+                            child: Container(
+                              clipBehavior: Clip.hardEdge,
+                              height: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: CustomPaint(
+                                painter: ThreeDimensionanPainter(
                                   lines: lines,
-                                  isInEditMode: toolStatuses.first,
-                                  view: View.top,
+                                  xCameraRotationDegreeInRadians:
+                                      xAxisRotationDegreeInRadians,
+                                  yCameraRotationDegreeInRadians:
+                                      yAxisRotationDegreeInRadians,
+                                  zCameraRotationDegreeInRadians:
+                                      zAxisRotationDegreeInRadians,
+                                  cameraPosition: cameraPosition,
                                 ),
                               ),
-                              const Expanded(child: Placeholder()),
-                            ],
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: GestureDetector(
-                      onScaleUpdate: (details) {
-                        setState(() {
-                          if (!isShiftPressed) {
-                            cameraPosition.x -= details.focalPointDelta.dx;
-                            cameraPosition.y -= details.focalPointDelta.dy;
-                          } else {
-                            zAxisRotationDegreeInRadians -=
-                                details.focalPointDelta.dx / 50;
-                            xAxisRotationDegreeInRadians +=
-                                details.focalPointDelta.dy / 50;
-                          }
-
-                          cameraPosition.z = cameraPositionAfterScale.z +
-                              (ThreeDimensionanPainter
-                                      .distanceFromEyeToPerspectivePage) *
-                                  (details.scale - 1);
-                        });
-                      },
-                      onScaleEnd: (details) {
-                        cameraPositionAfterScale.x = cameraPosition.x;
-                        cameraPositionAfterScale.y = cameraPosition.y;
-                        cameraPositionAfterScale.z = cameraPosition.z;
-                      },
-                      child: Container(
-                        clipBehavior: Clip.hardEdge,
-                        height: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: CustomPaint(
-                          painter: ThreeDimensionanPainter(
-                            lines: lines,
-                            xCameraRotationDegreeInRadians:
-                                xAxisRotationDegreeInRadians,
-                            yCameraRotationDegreeInRadians:
-                                yAxisRotationDegreeInRadians,
-                            zCameraRotationDegreeInRadians:
-                                zAxisRotationDegreeInRadians,
-                            cameraPosition: cameraPosition,
-                          ),
-                        ),
-                      ),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(information),
+                      Text(status),
+                    ],
                   ),
                 ],
               ),
@@ -220,15 +250,18 @@ class _HomeRouteState extends State<HomeRoute> {
 }
 
 class TwoDimensionalView extends StatefulWidget {
-  const TwoDimensionalView(
-      {super.key,
-      required this.lines,
-      required this.isInEditMode,
-      required this.view});
+  const TwoDimensionalView({
+    super.key,
+    required this.lines,
+    required this.isInEditMode,
+    required this.view,
+    this.onMessage,
+  });
 
   final View view;
   final List<ThreeDimensionalLine> lines;
   final bool isInEditMode;
+  final void Function(String message)? onMessage;
 
   @override
   State<TwoDimensionalView> createState() => _TwoDimensionalViewState();
@@ -244,42 +277,76 @@ class _TwoDimensionalViewState extends State<TwoDimensionalView> {
   ThreeDimensionalLine? selectedLine;
   Offset? panPointer;
 
+  final FocusNode _focusNode = FocusNode();
+
+  KeyEventResult processDeleteKey(FocusNode node, RawKeyEvent rawKeyEvent) {
+    if (rawKeyEvent.isKeyPressed(LogicalKeyboardKey.backspace)) {
+      if (selectedLine != null) {
+        setState(() {
+          widget.lines.removeWhere((line) => line == selectedLine);
+        });
+        return KeyEventResult.handled;
+      } else {
+        widget.onMessage?.call('No line selected');
+      }
+    }
+    return KeyEventResult.skipRemainingHandlers;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onPanDown: setupPanPointer,
-      onPanCancel: () {
-        if (widget.isInEditMode && panPointer != null) {
-          drawLine();
-        }
-      },
-      onPanUpdate: (details) {
-        final renderBox = context.findRenderObject() as RenderBox;
-        if (!renderBox.size.contains(details.localPosition)) {
-          print('OUTSIDE!!!');
-        }
-        if (!hasPanMoved && movingLine == null) {
-          setupMovingLine(details);
-        } else if (movingLine != null) {
-          moveLine(details);
-        }
+    return Focus(
+      focusNode: _focusNode,
+      onKey: processDeleteKey,
+      child: GestureDetector(
+        onTap: () {
+          _focusNode.requestFocus();
+        },
+        onPanDown: setupPanPointer,
+        onPanCancel: () {
+          if (widget.isInEditMode && panPointer != null) {
+            drawLine();
+          }
+        },
+        onPanUpdate: (details) {
+          final renderBox = context.findRenderObject() as RenderBox;
+          if (!renderBox.size.contains(details.localPosition)) {
+            print('OUTSIDE!!!');
+          }
+          if (!hasPanMoved && movingLine == null) {
+            setupMovingLine(details);
+          } else if (movingLine != null) {
+            moveLine(details);
+          }
 
-        hasPanMoved = true;
-      },
-      onPanEnd: resetParams,
-      onTapUp: selectLine,
-      child: Container(
-        height: double.infinity,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: CustomPaint(
-          painter: View2dPainter(
-            lines: widget.lines,
-            pointer: begin,
-            view: widget.view,
+          hasPanMoved = true;
+        },
+        onPanEnd: resetParams,
+        onTapUp: selectLine,
+        child: Container(
+          height: double.infinity,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: CustomPaint(
+            painter: View2dPainter(
+              lines: widget.lines,
+              pointer: begin,
+              view: widget.view,
+            ),
           ),
         ),
       ),
@@ -287,11 +354,11 @@ class _TwoDimensionalViewState extends State<TwoDimensionalView> {
   }
 
   void selectLine(TapUpDetails details) {
-    final pointer = details.localPosition;
-    for (final line in widget.lines) {
-      line.isSelected = false;
-    }
     if (!widget.isInEditMode) {
+      final pointer = details.localPosition;
+      for (final line in widget.lines) {
+        line.isSelected = false;
+      }
       for (int i = widget.lines.length - 1; i >= 0; i--) {
         final begin = widget.lines[i].begin.to(widget.view);
         final end = widget.lines[i].end.to(widget.view);
@@ -312,6 +379,7 @@ class _TwoDimensionalViewState extends State<TwoDimensionalView> {
           break;
         }
       }
+      selectedLine = null;
     }
 
     setState(() {});
