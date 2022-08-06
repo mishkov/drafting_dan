@@ -659,64 +659,6 @@ class View2dPainter extends CustomPainter {
       selectionPaint,
     );
     return;
-    canvas.drawLine(
-      line.begin
-          .translate(-padding, -padding)
-          .translateWith(-line.begin)
-          .rotateBy(angle)
-          .translateWith(line.begin),
-      line.end
-          .translate(padding, -padding)
-          .translateWith(-line.end)
-          .rotateBy(angle)
-          .translateWith(line.end),
-      selectionPaint,
-    );
-    canvas.drawLine(
-      line.begin
-          .translate(padding, -padding)
-          .translateWith(-line.begin)
-          .rotateBy(angle)
-          .translateWith(line.begin),
-      line.end
-          .translate(padding, padding)
-          .translateWith(-line.end)
-          .rotateBy(angle)
-          .translateWith(line.end),
-      selectionPaint,
-    );
-    canvas.drawLine(
-      line.begin
-          .translate(padding, padding)
-          .translateWith(-line.begin)
-          .rotateBy(angle)
-          .translateWith(line.begin),
-      line.end
-          .translate(-padding, padding)
-          .translateWith(-line.end)
-          .rotateBy(angle)
-          .translateWith(line.end),
-      selectionPaint,
-    );
-    canvas.drawLine(
-      line.begin
-          .translate(-padding, padding)
-          .translateWith(-line.begin)
-          .rotateBy(angle)
-          .translateWith(line.begin),
-      line.end
-          .translate(-padding, -padding)
-          .translateWith(-line.end)
-          .rotateBy(angle)
-          .translateWith(line.end),
-      selectionPaint,
-    );
-    // canvas.drawLine(line.end.translate(padding, -padding),
-    //     line.end.translate(padding, padding), selectionPaint);
-    // canvas.drawLine(line.end.translate(padding, padding),
-    //     line.begin.translate(-padding, padding), selectionPaint);
-    // canvas.drawLine(line.begin.translate(-padding, padding),
-    //     line.begin.translate(-padding, -padding), selectionPaint);
   }
 
   void _drawPointer(Canvas canvas, Size size) {
