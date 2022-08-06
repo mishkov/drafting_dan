@@ -58,9 +58,6 @@ class _HomeRouteState extends State<HomeRoute> {
   ];
   List<bool> toolStatuses = [false, false];
 
-  bool isBeginPointSelected = false;
-  Offset? begin;
-
   double xAxisRotationDegreeInRadians = 0.0;
   double yAxisRotationDegreeInRadians = 0.0;
   double zAxisRotationDegreeInRadians = 0.0;
@@ -70,12 +67,6 @@ class _HomeRouteState extends State<HomeRoute> {
       ThreeDimensionalPoint(0, 0, -120);
 
   bool isShiftPressed = false;
-
-  bool hasPanMoved = false;
-
-  ThreeDimensionalLine? movingLine;
-  ThreeDimensionalLine? selectedLine;
-  Offset? panPointer;
 
   @override
   void initState() {
@@ -135,132 +126,10 @@ class _HomeRouteState extends State<HomeRoute> {
                           child: Row(
                             children: [
                               Expanded(
-                                child: GestureDetector(
-                                  onPanDown: (details) {
-                                    panPointer = details.localPosition;
-                                  },
-                                  onPanCancel: () {
-                                    if (toolStatuses.first &&
-                                        panPointer != null) {
-                                      final pointer = panPointer!;
-                                      if (isBeginPointSelected) {
-                                        lines.add(ThreeDimensionalLine(
-                                            begin: ThreeDimensionalPoint(
-                                                begin!.dx, 0, begin!.dy),
-                                            end: ThreeDimensionalPoint(
-                                                pointer.dx, 0, pointer.dy)));
-                                        begin = null;
-                                        isBeginPointSelected = false;
-                                      } else {
-                                        begin = pointer;
-                                        isBeginPointSelected = true;
-                                      }
-                                      setState(() {});
-                                    }
-                                  },
-                                  onPanUpdate: (details) {
-                                    final renderBox =
-                                        context.findRenderObject() as RenderBox;
-                                    if (!renderBox.size
-                                        .contains(details.localPosition)) {
-                                      print('OUTSIDE!!!');
-                                    }
-                                    if (!hasPanMoved && movingLine == null) {
-                                      Offset pointer;
-                                      if (!hasPanMoved) {
-                                        pointer =
-                                            panPointer ?? details.localPosition;
-                                      } else {
-                                        pointer = details.localPosition;
-                                      }
-                                      for (int i = lines.length - 1;
-                                          i >= 0;
-                                          i--) {
-                                        final begin =
-                                            lines[i].begin.to(View.front);
-                                        final end = lines[i].end.to(View.front);
-                                        final distanceWithPointer =
-                                            begin.distanceTo(pointer) +
-                                                pointer.distanceTo(end);
-                                        final lineLength =
-                                            begin.distanceTo(end);
-                                        const precision = 1.0;
-                                        final isPointerOnLine =
-                                            (lineLength - distanceWithPointer)
-                                                    .abs() <
-                                                precision;
-                                        if (isPointerOnLine) {
-                                          movingLine = lines[i];
-                                          break;
-                                        }
-                                      }
-                                    } else if (movingLine != null) {
-                                      setState(() {
-                                        movingLine!.begin.x += details.delta.dx;
-                                        movingLine!.end.x += details.delta.dx;
-                                        movingLine!.begin.z += details.delta.dy;
-                                        movingLine!.end.z += details.delta.dy;
-                                      });
-                                    }
-
-                                    hasPanMoved = true;
-                                  },
-                                  onPanEnd: (details) {
-                                    hasPanMoved = false;
-                                    panPointer = null;
-                                    movingLine = null;
-                                  },
-                                  onTapUp: (details) {
-                                    final pointer = details.localPosition;
-                                    for (final line in lines) {
-                                      line.isSelected = false;
-                                    }
-                                    if (!toolStatuses.first) {
-                                      for (int i = lines.length - 1;
-                                          i >= 0;
-                                          i--) {
-                                        final begin =
-                                            lines[i].begin.to(View.front);
-                                        final end = lines[i].end.to(View.front);
-                                        final distanceWithPointer =
-                                            begin.distanceTo(pointer) +
-                                                pointer.distanceTo(end);
-                                        final lineLength =
-                                            begin.distanceTo(end);
-                                        const precision = 1.0;
-                                        final isPointerOnLine =
-                                            (lineLength - distanceWithPointer)
-                                                    .abs() <
-                                                precision;
-                                        if (isPointerOnLine) {
-                                          if (lines[i] == selectedLine) {
-                                            selectedLine = null;
-                                            lines[i].isSelected = false;
-                                          } else {
-                                            selectedLine = lines[i];
-                                            lines[i].isSelected = true;
-                                          }
-                                          break;
-                                        }
-                                      }
-                                    }
-
-                                    setState(() {});
-                                  },
-                                  child: Container(
-                                    height: double.infinity,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: CustomPaint(
-                                      painter: View2dPainter(
-                                          lines: lines,
-                                          pointer: begin,
-                                          view: View.front),
-                                    ),
-                                  ),
+                                child: TwoDimensionalView(
+                                  lines: lines,
+                                  isInEditMode: toolStatuses.first,
+                                  view: View.front,
                                 ),
                               ),
                               Expanded(
@@ -277,21 +146,10 @@ class _HomeRouteState extends State<HomeRoute> {
                           child: Row(
                             children: [
                               Expanded(
-                                child: GestureDetector(
-                                  onTapUp: (details) {},
-                                  child: Container(
-                                    height: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: CustomPaint(
-                                      painter: View2dPainter(
-                                          lines: lines,
-                                          pointer: begin,
-                                          view: View.top),
-                                    ),
-                                  ),
+                                child: TwoDimensionalView(
+                                  lines: lines,
+                                  isInEditMode: toolStatuses.first,
+                                  view: View.top,
                                 ),
                               ),
                               const Expanded(child: Placeholder()),
