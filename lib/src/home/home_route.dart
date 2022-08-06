@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:bitsdojo_window/bitsdojo_window.dart';
+import 'package:drafting_dan/src/home/multiply_matrix.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -486,6 +487,10 @@ class TwoDimensionalLine {
     required this.end,
     this.isSelected = false,
   });
+
+  double get length {
+    return (begin - end).distance;
+  }
 }
 
 enum View {
@@ -497,6 +502,26 @@ enum View {
 extension on Offset {
   double distanceTo(Offset other) {
     return (this - other).distance;
+  }
+
+  Offset rotateBy(double angle) {
+    final rotationMatrix = [
+      [math.cos(angle), -math.sin(angle)],
+      [math.sin(angle), math.cos(angle)],
+    ];
+
+    final offsetMatrix = [
+      [dx],
+      [dy],
+    ];
+
+    final result = multiplyMatrix(rotationMatrix, offsetMatrix);
+
+    return Offset(result[0][0], result[1][0]);
+  }
+
+  Offset translateWith(Offset other) {
+    return this + other;
   }
 }
 
@@ -531,16 +556,99 @@ class View2dPainter extends CustomPainter {
     final selectionPaint = Paint()
       ..color = Colors.blue
       ..strokeWidth = 2;
-    const padding = 10.0;
+    const padding = 5.0;
+    if (line.length == 0) {
+      return;
+    }
 
-    canvas.drawLine(line.begin.translate(-padding, -padding),
-        line.end.translate(padding, -padding), selectionPaint);
-    canvas.drawLine(line.end.translate(padding, -padding),
-        line.end.translate(padding, padding), selectionPaint);
-    canvas.drawLine(line.end.translate(padding, padding),
-        line.begin.translate(-padding, padding), selectionPaint);
-    canvas.drawLine(line.begin.translate(-padding, padding),
-        line.begin.translate(-padding, -padding), selectionPaint);
+    final lineVector = line.end - line.begin;
+    final rotatedLineVector = Offset(lineVector.dy, -lineVector.dx);
+    final normal = rotatedLineVector / rotatedLineVector.distance;
+    final parallel = lineVector / lineVector.distance;
+
+    final ratio = (line.end.dy - line.begin.dy) / line.length;
+    final cos = math.cos(ratio);
+    final angle = -(math.pi / 4 - math.acos(cos));
+
+    canvas.drawLine(
+      line.begin - parallel * padding + normal * padding,
+      line.end + parallel * padding + normal * padding,
+      selectionPaint,
+    );
+    canvas.drawLine(
+      line.begin - parallel * padding + normal * padding, // + Offset(30, 30),
+      line.begin - parallel * padding - normal * padding,
+      selectionPaint,
+    );
+    canvas.drawLine(
+      line.begin - parallel * padding - normal * padding,
+      line.end + parallel * padding - normal * padding,
+      selectionPaint,
+    );
+    canvas.drawLine(
+      line.end + parallel * padding + normal * padding, // + Offset(30, 30),
+      line.end + parallel * padding - normal * padding,
+      selectionPaint,
+    );
+    return;
+    canvas.drawLine(
+      line.begin
+          .translate(-padding, -padding)
+          .translateWith(-line.begin)
+          .rotateBy(angle)
+          .translateWith(line.begin),
+      line.end
+          .translate(padding, -padding)
+          .translateWith(-line.end)
+          .rotateBy(angle)
+          .translateWith(line.end),
+      selectionPaint,
+    );
+    canvas.drawLine(
+      line.begin
+          .translate(padding, -padding)
+          .translateWith(-line.begin)
+          .rotateBy(angle)
+          .translateWith(line.begin),
+      line.end
+          .translate(padding, padding)
+          .translateWith(-line.end)
+          .rotateBy(angle)
+          .translateWith(line.end),
+      selectionPaint,
+    );
+    canvas.drawLine(
+      line.begin
+          .translate(padding, padding)
+          .translateWith(-line.begin)
+          .rotateBy(angle)
+          .translateWith(line.begin),
+      line.end
+          .translate(-padding, padding)
+          .translateWith(-line.end)
+          .rotateBy(angle)
+          .translateWith(line.end),
+      selectionPaint,
+    );
+    canvas.drawLine(
+      line.begin
+          .translate(-padding, padding)
+          .translateWith(-line.begin)
+          .rotateBy(angle)
+          .translateWith(line.begin),
+      line.end
+          .translate(-padding, -padding)
+          .translateWith(-line.end)
+          .rotateBy(angle)
+          .translateWith(line.end),
+      selectionPaint,
+    );
+    // canvas.drawLine(line.end.translate(padding, -padding),
+    //     line.end.translate(padding, padding), selectionPaint);
+    // canvas.drawLine(line.end.translate(padding, padding),
+    //     line.begin.translate(-padding, padding), selectionPaint);
+    // canvas.drawLine(line.begin.translate(-padding, padding),
+    //     line.begin.translate(-padding, -padding), selectionPaint);
   }
 
   void _drawPointer(Canvas canvas, Size size) {
