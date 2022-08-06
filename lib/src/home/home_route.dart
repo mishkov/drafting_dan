@@ -63,10 +63,10 @@ class _HomeRouteState extends State<HomeRoute> {
   double xAxisRotationDegreeInRadians = 0.0;
   double yAxisRotationDegreeInRadians = 0.0;
   double zAxisRotationDegreeInRadians = 0.0;
-  ThreeDimensionalPoint cameraPosition = ThreeDimensionalPoint(0, 0, 0);
+  ThreeDimensionalPoint cameraPosition = ThreeDimensionalPoint(0, 0, -120);
 
   ThreeDimensionalPoint cameraPositionAfterScale =
-      ThreeDimensionalPoint(0, 0, 0);
+      ThreeDimensionalPoint(0, 0, -120);
   FocusNode? focus;
 
   bool isShiftPressed = false;
@@ -253,12 +253,10 @@ class _HomeRouteState extends State<HomeRoute> {
                                 details.focalPointDelta.dy / 50;
                           }
 
-                          cameraPosition.z = (cameraPositionAfterScale.z +
-                                      ThreeDimensionanPainter
-                                          .distanceFromEyeToPerspectivePage) *
-                                  details.scale -
-                              ThreeDimensionanPainter
-                                  .distanceFromEyeToPerspectivePage;
+                          cameraPosition.z = cameraPositionAfterScale.z +
+                              (ThreeDimensionanPainter
+                                      .distanceFromEyeToPerspectivePage) *
+                                  (details.scale - 1);
                         });
                       },
                       onScaleEnd: (details) {
