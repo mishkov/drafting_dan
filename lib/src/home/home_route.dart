@@ -1,9 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:bitsdojo_window/bitsdojo_window.dart';
-import 'package:drafting_dan/src/home/three_dimensional_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import 'package:drafting_dan/src/home/three_dimensional_view.dart';
 
 class HomeRoute extends StatefulWidget {
   static const routeName = '/';
@@ -67,9 +68,14 @@ class _HomeRouteState extends State<HomeRoute> {
 
   ThreeDimensionalPoint cameraPositionAfterScale =
       ThreeDimensionalPoint(0, 0, -120);
-  FocusNode? focus;
 
   bool isShiftPressed = false;
+
+  bool hasPanMoved = false;
+
+  ThreeDimensionalLine? movingLine;
+  ThreeDimensionalLine? selectedLine;
+  Offset? panPointer;
 
   @override
   void initState() {
@@ -130,9 +136,13 @@ class _HomeRouteState extends State<HomeRoute> {
                             children: [
                               Expanded(
                                 child: GestureDetector(
-                                  onTapUp: (details) {
-                                    final pointer = details.localPosition;
-                                    if (toolStatuses.first) {
+                                  onPanDown: (details) {
+                                    panPointer = details.localPosition;
+                                  },
+                                  onPanCancel: () {
+                                    if (toolStatuses.first &&
+                                        panPointer != null) {
+                                      final pointer = panPointer!;
                                       if (isBeginPointSelected) {
                                         lines.add(ThreeDimensionalLine(
                                             begin: ThreeDimensionalPoint(
@@ -145,7 +155,24 @@ class _HomeRouteState extends State<HomeRoute> {
                                         begin = pointer;
                                         isBeginPointSelected = true;
                                       }
-                                    } else {
+                                      setState(() {});
+                                    }
+                                  },
+                                  onPanUpdate: (details) {
+                                    final renderBox =
+                                        context.findRenderObject() as RenderBox;
+                                    if (!renderBox.size
+                                        .contains(details.localPosition)) {
+                                      print('OUTSIDE!!!');
+                                    }
+                                    if (!hasPanMoved && movingLine == null) {
+                                      Offset pointer;
+                                      if (!hasPanMoved) {
+                                        pointer =
+                                            panPointer ?? details.localPosition;
+                                      } else {
+                                        pointer = details.localPosition;
+                                      }
                                       for (int i = lines.length - 1;
                                           i >= 0;
                                           i--) {
@@ -163,10 +190,58 @@ class _HomeRouteState extends State<HomeRoute> {
                                                     .abs() <
                                                 precision;
                                         if (isPointerOnLine) {
-                                          lines[i].isSelected =
-                                              !lines[i].isSelected;
+                                          movingLine = lines[i];
+                                          break;
                                         }
-                                        break;
+                                      }
+                                    } else if (movingLine != null) {
+                                      setState(() {
+                                        movingLine!.begin.x += details.delta.dx;
+                                        movingLine!.end.x += details.delta.dx;
+                                        movingLine!.begin.z += details.delta.dy;
+                                        movingLine!.end.z += details.delta.dy;
+                                      });
+                                    }
+
+                                    hasPanMoved = true;
+                                  },
+                                  onPanEnd: (details) {
+                                    hasPanMoved = false;
+                                    panPointer = null;
+                                    movingLine = null;
+                                  },
+                                  onTapUp: (details) {
+                                    final pointer = details.localPosition;
+                                    for (final line in lines) {
+                                      line.isSelected = false;
+                                    }
+                                    if (!toolStatuses.first) {
+                                      for (int i = lines.length - 1;
+                                          i >= 0;
+                                          i--) {
+                                        final begin =
+                                            lines[i].begin.to(View.front);
+                                        final end = lines[i].end.to(View.front);
+                                        final distanceWithPointer =
+                                            begin.distanceTo(pointer) +
+                                                pointer.distanceTo(end);
+                                        final lineLength =
+                                            begin.distanceTo(end);
+                                        const precision = 1.0;
+                                        final isPointerOnLine =
+                                            (lineLength - distanceWithPointer)
+                                                    .abs() <
+                                                precision;
+                                        if (isPointerOnLine) {
+                                          if (lines[i] == selectedLine) {
+                                            selectedLine = null;
+                                            lines[i].isSelected = false;
+                                          } else {
+                                            selectedLine = lines[i];
+                                            lines[i].isSelected = true;
+                                          }
+                                          break;
+                                        }
                                       }
                                     }
 
@@ -189,21 +264,10 @@ class _HomeRouteState extends State<HomeRoute> {
                                 ),
                               ),
                               Expanded(
-                                child: GestureDetector(
-                                  onTapUp: (details) {},
-                                  child: Container(
-                                    height: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: CustomPaint(
-                                      painter: View2dPainter(
-                                          lines: lines,
-                                          pointer: begin,
-                                          view: View.left),
-                                    ),
-                                  ),
+                                child: TwoDimensionalView(
+                                  lines: lines,
+                                  isInEditMode: toolStatuses.first,
+                                  view: View.left,
                                 ),
                               ),
                             ],
@@ -296,10 +360,171 @@ class _HomeRouteState extends State<HomeRoute> {
   }
 }
 
+class TwoDimensionalView extends StatefulWidget {
+  const TwoDimensionalView(
+      {super.key,
+      required this.lines,
+      required this.isInEditMode,
+      required this.view});
+
+  final View view;
+  final List<ThreeDimensionalLine> lines;
+  final bool isInEditMode;
+
+  @override
+  State<TwoDimensionalView> createState() => _TwoDimensionalViewState();
+}
+
+class _TwoDimensionalViewState extends State<TwoDimensionalView> {
+  bool isBeginPointSelected = false;
+  Offset? begin;
+
+  bool hasPanMoved = false;
+
+  ThreeDimensionalLine? movingLine;
+  ThreeDimensionalLine? selectedLine;
+  Offset? panPointer;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onPanDown: setupPanPointer,
+      onPanCancel: () {
+        if (widget.isInEditMode && panPointer != null) {
+          drawLine();
+        }
+      },
+      onPanUpdate: (details) {
+        final renderBox = context.findRenderObject() as RenderBox;
+        if (!renderBox.size.contains(details.localPosition)) {
+          print('OUTSIDE!!!');
+        }
+        if (!hasPanMoved && movingLine == null) {
+          setupMovingLine(details);
+        } else if (movingLine != null) {
+          moveLine(details);
+        }
+
+        hasPanMoved = true;
+      },
+      onPanEnd: resetParams,
+      onTapUp: selectLine,
+      child: Container(
+        height: double.infinity,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: CustomPaint(
+          painter: View2dPainter(
+            lines: widget.lines,
+            pointer: begin,
+            view: widget.view,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void selectLine(TapUpDetails details) {
+    final pointer = details.localPosition;
+    for (final line in widget.lines) {
+      line.isSelected = false;
+    }
+    if (!widget.isInEditMode) {
+      for (int i = widget.lines.length - 1; i >= 0; i--) {
+        final begin = widget.lines[i].begin.to(widget.view);
+        final end = widget.lines[i].end.to(widget.view);
+        final distanceWithPointer =
+            begin.distanceTo(pointer) + pointer.distanceTo(end);
+        final lineLength = begin.distanceTo(end);
+        const precision = 1.0;
+        final isPointerOnLine =
+            (lineLength - distanceWithPointer).abs() < precision;
+        if (isPointerOnLine) {
+          if (widget.lines[i] == selectedLine) {
+            selectedLine = null;
+            widget.lines[i].isSelected = false;
+          } else {
+            selectedLine = widget.lines[i];
+            widget.lines[i].isSelected = true;
+          }
+          break;
+        }
+      }
+    }
+
+    setState(() {});
+  }
+
+  void resetParams(DragEndDetails details) {
+    hasPanMoved = false;
+    panPointer = null;
+    movingLine = null;
+  }
+
+  void moveLine(DragUpdateDetails details) {
+    setState(() {
+      movingLine!.begin.translateOn(widget.view, details.delta);
+      movingLine!.end.translateOn(widget.view, details.delta);
+    });
+  }
+
+  void setupMovingLine(DragUpdateDetails details) {
+    Offset pointer;
+    if (!hasPanMoved) {
+      pointer = panPointer ?? details.localPosition;
+    } else {
+      pointer = details.localPosition;
+    }
+    for (int i = widget.lines.length - 1; i >= 0; i--) {
+      final begin = widget.lines[i].begin.to(widget.view);
+      final end = widget.lines[i].end.to(widget.view);
+      final distanceWithPointer =
+          begin.distanceTo(pointer) + pointer.distanceTo(end);
+      final lineLength = begin.distanceTo(end);
+      const precision = 1.0;
+      final isPointerOnLine =
+          (lineLength - distanceWithPointer).abs() < precision;
+      if (isPointerOnLine) {
+        movingLine = widget.lines[i];
+        break;
+      }
+    }
+  }
+
+  void drawLine() {
+    final pointer = panPointer!;
+    if (isBeginPointSelected) {
+      var newLine = ThreeDimensionalLine.zero()
+        ..begin.translateOn(widget.view, begin!)
+        ..end.translateOn(widget.view, pointer);
+
+      widget.lines.add(newLine);
+      begin = null;
+      isBeginPointSelected = false;
+    } else {
+      begin = pointer;
+      isBeginPointSelected = true;
+    }
+    setState(() {});
+  }
+
+  void setupPanPointer(DragDownDetails details) {
+    panPointer = details.localPosition;
+  }
+}
+
 class ThreeDimensionalPoint {
   double x, y, z;
 
   ThreeDimensionalPoint(this.x, this.y, this.z);
+
+  ThreeDimensionalPoint.zero()
+      : x = 0,
+        y = 0,
+        z = 0;
 
   ThreeDimensionalPoint.fromOffset(Offset offset)
       : x = offset.dx,
@@ -322,6 +547,21 @@ class ThreeDimensionalPoint {
     }
   }
 
+  void translateOn(View view, Offset offset) {
+    if (view == View.front) {
+      x = x + offset.dx;
+      z = z + offset.dy;
+    } else if (view == View.top) {
+      x = x + offset.dx;
+      y = y + offset.dy;
+    } else if (view == View.left) {
+      y = y + offset.dx;
+      z = z + offset.dy;
+    } else {
+      throw UnimplementedError();
+    }
+  }
+
   List<List<double>> toMatrix() {
     return [
       [x],
@@ -329,6 +569,14 @@ class ThreeDimensionalPoint {
       [z],
       [1]
     ];
+  }
+
+  ThreeDimensionalPoint copyWith({double? x, double? y, double? z}) {
+    return ThreeDimensionalPoint(
+      x ?? this.x,
+      y ?? this.y,
+      z ?? this.z,
+    );
   }
 }
 
